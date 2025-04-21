@@ -88,4 +88,185 @@ amigo: друг" class="w-full p-2 mb-2 border rounded"></textarea>
     function renderWords() {
       const tbody = document.getElementById('words-tbody');
       const noWords = document.getElementById('no-words');
-      const words
+      const wordsTable = document.getElementById('words-table');
+      tbody.innerHTML = '';
+      if (words.length > 0) {
+        noWords.classList.add('hidden');
+        wordsTable.classList.remove('hidden');
+        words.forEach((word, index) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td class="border border-gray-300 p-2">${word.portuguese}</td>
+            <td class="border border-gray-300 p-2">${word.russian}</td>
+            <td class="border border-gray-300 p-2 flex space-x-2">
+              <button onclick="openEditModal(${index})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Редактировать</button>
+              <button onclick="deleteWord(${index})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Удалить</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } else {
+        noWords.classList.remove('hidden');
+        wordsTable.classList.add('hidden');
+      }
+    }
+
+    function addWord() {
+      const portuguese = document.getElementById('portuguese-word').value.trim();
+      const russian = document.getElementById('russian-word').value.trim();
+      if (portuguese && russian) {
+        words.push({ portuguese, russian });
+        localStorage.setItem('words', JSON.stringify(words));
+        document.getElementById('portuguese-word').value = '';
+        document.getElementById('russian-word').value = '';
+        alert('Слово добавлено!');
+        renderWords();
+      } else {
+        alert('Введите оба слова!');
+      }
+    }
+
+    function importWords() {
+      const bulkInput = document.getElementById('bulk-words').value.trim();
+      if (!bulkInput) {
+        alert('Введите слова для импорта!');
+        return;
+      }
+      const lines = bulkInput.split('\n');
+      let addedCount = 0;
+      lines.forEach(line => {
+        const [portuguese, russian] = line.split(':').map(str => str.trim());
+        if (portuguese && russian) {
+          words.push({ portuguese, russian });
+          addedCount++;
+        }
+      });
+      if (addedCount > 0) {
+        localStorage.setItem('words', JSON.stringify(words));
+        document.getElementById('bulk-words').value = '';
+        alert(`Успешно добавлено ${addedCount} слов!`);
+        renderWords();
+      } else {
+        alert('Ни одно слово не добавлено. Проверьте формат (португальское слово: перевод).');
+      }
+    }
+
+    function exportWords() {
+      if (words.length === 0) {
+        alert('Нет слов для экспорта!');
+        return;
+      }
+
+      const { Document, Packer, Paragraph, HeadingLevel } = docx;
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              text: 'Список португальских слов',
+              heading: HeadingLevel.HEADING_1,
+            }),
+            ...words.map(word => new Paragraph({
+              text: `${word.portuguese}: ${word.russian}`,
+            })),
+          ],
+        }],
+      });
+
+      Packer.toBlob(doc).then(blob => {
+        saveAs(blob, 'portuguese_words.docx');
+      });
+    }
+
+    function deleteWord(index) {
+      if (confirm('Вы уверены, что хотите удалить это слово?')) {
+        words.splice(index, 1);
+        localStorage.setItem('words', JSON.stringify(words));
+        renderWords();
+        alert('Слово удалено!');
+      }
+    }
+
+    function openEditModal(index) {
+      editIndex = index;
+      const word = words[index];
+      document.getElementById('edit-portuguese').value = word.portuguese;
+      document.getElementById('edit-russian').value = word.russian;
+      document.getElementById('edit-modal').classList.remove('hidden');
+    }
+
+    function saveEdit() {
+      const portuguese = document.getElementById('edit-portuguese').value.trim();
+      const russian = document.getElementById('edit-russian').value.trim();
+      if (portuguese && russian) {
+        words[editIndex] = { portuguese, russian };
+        localStorage.setItem('words', JSON.stringify(words));
+        renderWords();
+        closeEditModal();
+        alert('Слово обновлено!');
+      } else {
+        alert('Введите оба слова!');
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+      editIndex = null;
+    }
+
+    function startTest() {
+      if (words.length === 0) {
+        alert('Добавьте хотя бы одно слово!');
+        return;
+      }
+      document.getElementById('add-word-section').classList.add('hidden');
+      document.getElementById('test-section').classList.add('hidden');
+      document.getElementById('words-list-section').classList.add('hidden');
+      document.getElementById('quiz-section').classList.remove('hidden');
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+      const mode = document.getElementById('test-mode').value;
+      currentQuestion = words[Math.floor(Math.random() * words.length)];
+      const questionText = mode === 'rus-to-por' ? currentQuestion.russian : currentQuestion.portuguese;
+      document.getElementById('question').textContent = `Переведите: ${questionText}`;
+      document.getElementById('answer').value = '';
+      document.getElementById('result').textContent = '';
+      document.getElementById('next-btn').classList.add('hidden');
+    }
+
+    function checkAnswer() {
+      const mode = document.getElementById('test-mode').value;
+      const answer = document.getElementById('answer').value.trim().toLowerCase();
+      const correctAnswer = mode === 'rus-to-por' ? currentQuestion.portuguese.toLowerCase() : currentQuestion.russian.toLowerCase();
+      const result = document.getElementById('result');
+      if (answer === correctAnswer) {
+        result.textContent = 'Правильно!';
+        result.classList.add('text-green-500');
+        result.classList.remove('text-red-500');
+      } else {
+        result.textContent = `Неправильно. Правильный ответ: ${correctAnswer}`;
+        result.classList.add('text-red-500');
+        result.classList.remove('text-green-500');
+      }
+      document.getElementById('next-btn').classList.remove('hidden');
+    }
+
+    function returnToMain() {
+      document.getElementById('quiz-section').classList.add('hidden');
+      document.getElementById('add-word-section').classList.remove('hidden');
+      document.getElementById('test-section').classList.remove('hidden');
+      document.getElementById('words-list-section').classList.remove('hidden');
+      currentQuestion = null;
+      document.getElementById('answer').value = '';
+      document.getElementById('result').textContent = '';
+      document.getElementById('next-btn').classList.add('hidden');
+    }
+
+    // Инициализация списка слов при загрузке страницы
+    renderWords();
+  </script>
+</body>
+</html>
