@@ -27,6 +27,23 @@ amigo: друг" class="w-full p-2 mb-2 border rounded"></textarea>
       <button onclick="exportWords()" class="w-full bg-gray-500 text-white p-2 mt-2 rounded hover:bg-gray-600">Экспортировать слова</button>
     </div>
 
+    <!-- Список добавленных слов -->
+    <div id="words-list-section" class="mb-6">
+      <h2 class="text-lg font-semibold mb-2">Добавленные слова</h2>
+      <div id="words-table" class="hidden">
+        <table class="w-full border-collapse border border-gray-300">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="border border-gray-300 p-2">Португальское слово</th>
+              <th class="border border-gray-300 p-2">Русский перевод</th>
+            </tr>
+          </thead>
+          <tbody id="words-tbody"></tbody>
+        </table>
+      </div>
+      <p id="no-words" class="text-gray-500">Слов пока нет</p>
+    </div>
+
     <!-- Выбор режима теста -->
     <div id="test-section" class="mb-6">
       <h2 class="text-lg font-semibold mb-2">Пройти тест</h2>
@@ -52,6 +69,28 @@ amigo: друг" class="w-full p-2 mb-2 border rounded"></textarea>
     let words = JSON.parse(localStorage.getItem('words')) || [];
     let currentQuestion = null;
 
+    function renderWords() {
+      const tbody = document.getElementById('words-tbody');
+      const noWords = document.getElementById('no-words');
+      const wordsTable = document.getElementById('words-table');
+      tbody.innerHTML = '';
+      if (words.length > 0) {
+        noWords.classList.add('hidden');
+        wordsTable.classList.remove('hidden');
+        words.forEach(word => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td class="border border-gray-300 p-2">${word.portuguese}</td>
+            <td class="border border-gray-300 p-2">${word.russian}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      } else {
+        noWords.classList.remove('hidden');
+        wordsTable.classList.add('hidden');
+      }
+    }
+
     function addWord() {
       const portuguese = document.getElementById('portuguese-word').value.trim();
       const russian = document.getElementById('russian-word').value.trim();
@@ -61,6 +100,7 @@ amigo: друг" class="w-full p-2 mb-2 border rounded"></textarea>
         document.getElementById('portuguese-word').value = '';
         document.getElementById('russian-word').value = '';
         alert('Слово добавлено!');
+        renderWords();
       } else {
         alert('Введите оба слова!');
       }
@@ -85,6 +125,7 @@ amigo: друг" class="w-full p-2 mb-2 border rounded"></textarea>
         localStorage.setItem('words', JSON.stringify(words));
         document.getElementById('bulk-words').value = '';
         alert(`Успешно добавлено ${addedCount} слов!`);
+        renderWords();
       } else {
         alert('Ни одно слово не добавлено. Проверьте формат (португальское слово: перевод).');
       }
@@ -177,6 +218,9 @@ amigo: друг" class="w-full p-2 mb-2 border rounded"></textarea>
       }
       document.getElementById('next-btn').classList.remove('hidden');
     }
+
+    // Инициализация списка слов при загрузке страницы
+    renderWords();
   </script>
 </body>
 </html>
